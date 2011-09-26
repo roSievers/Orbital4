@@ -13,3 +13,15 @@ class XYMap():
             return self.data[x][y]
         except IndexError:
             return None
+        
+class CentralCurry(object):
+    def __init__(self, function, head=(), tail=()):
+        self.function = function
+        self.head = head
+        self.tail = tail
+    def __call__(self, *arg):
+        args = list(self.head)
+        args.extend(list(arg))
+        args.extend(list(self.tail))
+        
+        return self.function(*tuple(args))

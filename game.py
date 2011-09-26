@@ -13,9 +13,15 @@ size = (640, 480)
 screen = pygame.display.set_mode(size)
 
 clock = pygame.time.Clock()
+worldTime = 0
+
+autoMove = False
+animationDuration = 10
+animTick = 0
 
 while True:
 	clock.tick(30)
+	worldTime += 1
 	for e in pygame.event.get():
 		if e.type == pygame.QUIT:
 			sys.exit()
@@ -27,9 +33,18 @@ while True:
 		if e.type == pygame.KEYDOWN:
 			if e.key == pygame.K_SPACE:
 				for block in m:
-					block.move()
-
+					block.move(animationDuration)
+			elif e.key == pygame.K_a:
+				autoMove = not autoMove
+			
 	m.draw(screen)
 	for block in m:
-		block.draw(screen)
+		block.draw(screen, worldTime)
+	
+	if autoMove:
+		animTick += 1
+		if animTick == animationDuration:
+			animTick = 0
+			for block in m:
+				block.move(animationDuration)
 	pygame.display.flip()
