@@ -14,6 +14,9 @@ class XYMap():
         except IndexError:
             return None
         
+    def set(self, x, y, value):
+        self.data[x][y] = value
+        
 class CentralCurry(object):
     def __init__(self, function, head=(), tail=()):
         self.function = function

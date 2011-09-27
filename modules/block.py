@@ -6,10 +6,12 @@ from animation import StaticAnimator, FlowAnimator
 from math import CentralCurry as CC
 
 class Block(DirectedTile, sprite.Sprite):
-	def __init__(self, world, x, y):
+	def __init__(self, world, player, x, y):
 		DirectedTile.__init__(self, x, y, (0, 0))
-		sprite.Sprite.__init__(self, world)
+		sprite.Sprite.__init__(self)
 		self.world = world
+		self.world.registerBlock(self)
+		self.player = player
 		
 		self.anim = CC(StaticAnimator)
 	def draw(self, target, time):
@@ -20,22 +22,26 @@ class Block(DirectedTile, sprite.Sprite):
 			# If the animator isn't constructed yet, create one
 			self.anim = self.anim(time, rect)
 			
-		draw.rect(target, (200, 0, 0), self.anim.evaluate(time))
-	def move(self, animationDuration):
+		draw.rect(target, self.player.color, self.anim.evaluate(time))
+		if self.isStatic:
+			draw.rect(target, (150, 0, 150), self.anim.evaluate(time), 2)
+	def trigger(self):
 		# current Tile
 		tile = self.world(self.x, self.y)
 		
 		# trigger the current Tile
 		if isinstance(tile, TriggerTile):
 			tile.trigger(self)
-						
-		target = self.world(self.x+self.direction[0], self.y+self.direction[1])
 		
-		if isinstance(target, Static):
-			self.direction = (0, 0)
+	def	makeRequest(self, requestMap):
+		self.target = self.x+self.direction[0], self.y+self.direction[1]
+		requestMap.set(*self.target, value=self)
+	
+	def move(self, animationDuration):
 		
-		self.x += self.direction[0]
-		self.y += self.direction[1]
+		"""self.x += self.direction[0]
+		self.y += self.direction[1]"""
+		self.x, self.y = self.target
 		
 		a = self.anim
 		
@@ -45,8 +51,14 @@ class Block(DirectedTile, sprite.Sprite):
 			else:
 				return FlowAnimator(time, animationDuration, a(time, rect), StaticAnimator(time, rect))
 				
-		
 		self.anim = curry
+		
+	def kill(self):
+		self.world.removeBlock(self.x, self.y)
+		sprite.Sprite.kill(self)
 	def _getIsStatic(self):
-		return self.x == 0 == self.y
+		return self.direction[0] == 0 == self.direction[1]
 	isStatic = property(_getIsStatic)
+	
+	def __str__(self):
+		return "<Block(%d, %d) -> (%d, %d)>" % (self.x, self.y, self.direction[0], self.direction[1])

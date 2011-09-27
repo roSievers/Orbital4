@@ -1,7 +1,9 @@
 """This Module provides the basic Tile classes.
 For convenience, moving blocks are tiles, too"""
         
-from pygame import draw, Rect
+from pygame import draw, Rect, image
+from recolor import compileSVASheet
+from spriteSheet import CachedResizeSheet
         
 class Tile(object):
     __slots__ = ["x", "y"]
@@ -59,13 +61,20 @@ class Slot(DirectedTile):
         
 # Redirection Tiles
 
+imgPusher = CachedResizeSheet(compileSVASheet(image.load("pusher.png"), (0, 255, 0)), 4)
+
+print imgPusher.sprites.data
+
 class Pusher(DirectedTile):
     def __init__(self, x, y, direction, color):
         DirectedTile.__init__(self, x, y, direction)
         self.color = color
     def draw(self, target, pxCellSize):
-        draw.rect(target, self.color, self.pxRect(pxCellSize) )
-        draw.rect(target, (0, 0, 0), self.pxRect(pxCellSize), 1)
+        rect = self.pxRect(pxCellSize)
+        draw.rect(target, self.color, rect )
+        draw.rect(target, (0, 0, 0), rect, 1)
+        id =  self.direction[0] + self.direction[1] + 2* abs(self.direction[0]) + abs(self.direction[1])
+        target.blit(imgPusher(id, 0, rect.w, rect.h), (rect.x, rect.y))
     def trigger(self, block):
         block.direction = self.direction
     
@@ -81,13 +90,24 @@ def PushDown(x, y):
 def PushRight(x, y):
     return Pusher(x, y, (1, 0), (0, 150, 0))
 
+# Freeze Tile
+
+class Freeze(TriggerTile):
+    def __init__(self, x, y):
+        TriggerTile.__init__(self, x, y)
+    def draw(self, target, pxCellSize):
+        draw.rect(target, (160, 160, 255), self.pxRect(pxCellSize) )
+        draw.rect(target, (0, 0, 0), self.pxRect(pxCellSize), 1)
+    def trigger(self, block):
+        block.direction = (0, 0)
+
 # Mirror Tile
 
 class Mirror(TriggerTile):
     def __init__(self, x, y):
         TriggerTile.__init__(self, x, y)
     def draw(self, target, pxCellSize):
-        draw.rect(target, (255, 200, 200), self.pxRect(pxCellSize) )
+        draw.rect(target, (255, 180, 180), self.pxRect(pxCellSize) )
         draw.rect(target, (0, 0, 0), self.pxRect(pxCellSize), 1)
     def trigger(self, block):
         block.direction = (-block.direction[0], -block.direction[1])
@@ -102,3 +122,25 @@ class Delete(TriggerTile):
         draw.rect(target, (0, 0, 0), self.pxRect(pxCellSize), 1)
     def trigger(self, block):
         block.kill()
+        
+# Delay Tile
+
+class Delay(TriggerTile):
+    __slots__ = ["last", "lastDirection"]
+    def __init__(self, x, y):
+        TriggerTile.__init__(self, x, y)
+        self.last = None
+        self.lastDirection = None
+    def draw(self, target, pxCellSize):
+        draw.rect(target, (0, 0, 40), self.pxRect(pxCellSize) )
+        if self.last is not None:
+            draw.rect(target, self.last.player.color, self.pxRect(pxCellSize).inflate(-20, -20) )
+        draw.rect(target, (0, 0, 0), self.pxRect(pxCellSize), 1)
+    def trigger(self, block):
+        block.kill()
+        if self.last is not None:
+            block.world.registerBlock(self.last)
+            self.last.direction = self.lastDirection
+            
+        self.lastDirection = block.direction
+        self.last = block
